@@ -24,4 +24,4 @@ Este projeto contém um *script interativo* para instalação e configuração d
 
 ```bash
 git clone https://github.com/seu-usuario/seu-repo.git
-cd seu-repo
+cd Stack
