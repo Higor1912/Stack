@@ -1,94 +1,95 @@
 #!/bin/bash
 
-# Cores para terminal
-GREEN="\e[32m"
-RED="\e[31m"
-NC="\e[0m"
+# Cores
+verde="\e[32m"
+vermelho="\e[31m"
+reset="\e[0m"
 
-function banner() {
-    echo -e "${GREEN}"
-    echo "========================================="
-    echo "     Stack de Threat Intelligence        "
-    echo "========================================="
-    echo -e "${NC}"
+# Função para pausar
+pausar() {
+    echo -e "${verde}Pressione Enter para continuar...${reset}"
+    read
 }
 
-function install_spiderfoot() {
-    echo -e "${GREEN}[*] Instalando SpiderFoot...${NC}"
+# SpiderFoot
+instalar_spiderfoot() {
+    echo -e "${verde}Instalando SpiderFoot...${reset}"
     sudo apt update
-    sudo apt install -y git python3-pip python3-venv
+    sudo apt install -y python3-pip git
     git clone https://github.com/smicallef/spiderfoot.git
     cd spiderfoot || exit
-    python3 -m venv venv
-    source venv/bin/activate
-    pip install -r requirements.txt
-    echo -e "${GREEN}[*] Para rodar: cd spiderfoot && source venv/bin/activate && python3 sf.py${NC}"
+    pip3 install -r requirements.txt
+    echo -e "${verde}SpiderFoot instalado. Para iniciar: python3 sf.py${reset}"
+    cd ..
+    pausar
 }
 
-function install_theharvester() {
-    echo -e "${GREEN}[*] Instalando theHarvester...${NC}"
+# theHarvester
+instalar_theharvester() {
+    echo -e "${verde}Instalando theHarvester...${reset}"
     sudo apt update
     sudo apt install -y theharvester
-    echo -e "${GREEN}[*] Para usar: theHarvester -d dominio.com -b all${NC}"
+    echo -e "${verde}theHarvester instalado com sucesso.${reset}"
+    pausar
 }
 
-function install_wazuh() {
-    echo -e "${GREEN}[*] Instalando Wazuh (server + dashboard)...${NC}"
+# Wazuh
+instalar_wazuh() {
+    echo -e "${verde}Instalando Wazuh...${reset}"
     curl -sO https://packages.wazuh.com/4.7/wazuh-install.sh
-    sudo bash wazuh-install.sh -i
+    sudo bash ./wazuh-install.sh -a
+    echo -e "${verde}Wazuh instalado.${reset}"
+    pausar
 }
 
-function install_grafana() {
-    echo -e "${GREEN}[*] Instalando Grafana OSS...${NC}"
-    sudo apt install -y apt-transport-https software-properties-common
+# Grafana (com chave GPG atualizada)
+instalar_grafana() {
+    echo -e "${verde}Instalando Grafana...${reset}"
+    sudo apt install -y software-properties-common gnupg2 curl
     sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL https://packages.grafana.com/gpg.key | gpg --dearmor -o /etc/apt/keyrings/grafana.gpg
-    echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://packages.grafana.com/oss/deb stable main" | sudo tee /etc/apt/sources.list.d/grafana.list
+    curl -fsSL https://apt.grafana.com/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/grafana.gpg
+    echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee /etc/apt/sources.list.d/grafana.list > /dev/null
     sudo apt update
     sudo apt install -y grafana
-    sudo systemctl enable --now grafana-server
-    echo -e "${GREEN}[*] Acesse: http://localhost:3000${NC}"
+    sudo systemctl enable grafana-server
+    sudo systemctl start grafana-server
+    echo -e "${verde}Grafana instalado. Acesse http://localhost:3000${reset}"
+    pausar
 }
 
-function install_zabbix() {
-    echo -e "${GREEN}[*] Instalando Zabbix com MariaDB...${NC}"
-    
+# Zabbix com banco de dados
+instalar_zabbix() {
+    echo -e "${verde}Instalando Zabbix...${reset}"
+    wget https://repo.zabbix.com/zabbix/6.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_6.0-4+ubuntu$(lsb_release -rs)_all.deb
+    sudo dpkg -i zabbix-release_6.0-4+ubuntu$(lsb_release -rs)_all.deb
     sudo apt update
-    sudo apt install -y mariadb-server mariadb-client zabbix-server-mysql zabbix-frontend-php zabbix-apache-conf zabbix-sql-scripts zabbix-agent
-
-    echo -e "${GREEN}[*] Configurando banco de dados...${NC}"
-    mysql -e "CREATE DATABASE zabbix CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;"
-    mysql -e "CREATE USER zabbix@localhost IDENTIFIED BY 'ZabbixStrongPassword';"
-    mysql -e "GRANT ALL PRIVILEGES ON zabbix.* TO zabbix@localhost;"
-    mysql -e "FLUSH PRIVILEGES;"
-    zcat /usr/share/zabbix-sql-scripts/mysql/server.sql.gz | mysql -uzabbix -pZabbixStrongPassword zabbix
-
-    sudo sed -i "s/^# DBPassword=/DBPassword=ZabbixStrongPassword/" /etc/zabbix/zabbix_server.conf
-
-    sudo systemctl restart zabbix-server zabbix-agent apache2
-    sudo systemctl enable zabbix-server zabbix-agent apache2
-
-    echo -e "${GREEN}[*] Zabbix instalado! Acesse: http://localhost/zabbix${NC}"
+    sudo apt install -y zabbix-server-mysql zabbix-frontend-php zabbix-apache-conf zabbix-sql-scripts zabbix-agent mysql-server
+    echo -e "${verde}Zabbix instalado. Configure o banco de dados manualmente e edite o zabbix_server.conf${reset}"
+    pausar
 }
 
+# Menu
 while true; do
-    banner
-    echo "1) Instalar SpiderFoot"
-    echo "2) Instalar theHarvester"
-    echo "3) Instalar Wazuh"
-    echo "4) Instalar Grafana"
-    echo "5) Instalar Zabbix com banco"
-    echo "6) Sair"
-    read -rp "Escolha uma opção: " opcao
+    clear
+    echo -e "${verde}"
+    echo "========== Stack de Threat Intelligence =========="
+    echo -e "${reset}"
+    echo "1. Instalar SpiderFoot"
+    echo "2. Instalar theHarvester"
+    echo "3. Instalar Wazuh"
+    echo "4. Instalar Grafana"
+    echo "5. Instalar Zabbix com banco"
+    echo "6. Sair"
+    echo -n "Escolha uma opção: "
+    read opcao
 
     case $opcao in
-        1) install_spiderfoot ;;
-        2) install_theharvester ;;
-        3) install_wazuh ;;
-        4) install_grafana ;;
-        5) install_zabbix ;;
-        6) echo "Saindo..."; exit ;;
-        *) echo -e "${RED}[!] Opção inválida.${NC}" ;;
+        1) instalar_spiderfoot ;;
+        2) instalar_theharvester ;;
+        3) instalar_wazuh ;;
+        4) instalar_grafana ;;
+        5) instalar_zabbix ;;
+        6) exit ;;
+        *) echo -e "${vermelho}Opção inválida!${reset}" ; pausar ;;
     esac
-    read -rp "Pressione Enter para continuar..."
 done
